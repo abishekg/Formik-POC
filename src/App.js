@@ -1,6 +1,6 @@
 import React from 'react';
 import './App.css';
-import {Formik, useField, Form, Field} from 'formik';
+import {Formik, useField, Form, Field, FieldArray} from 'formik';
 import * as Yup from 'yup';
 
 const CustomTextInput = ({label, ...props}) => {
@@ -15,8 +15,6 @@ const CustomTextInput = ({label, ...props}) => {
     </>
   )
 }
-
-
 
 const App = () => {
   const [borrowers, setBorrowers] = React.useState(['borrower1', 'borrower2']);
@@ -39,39 +37,38 @@ const App = () => {
   };
 
   return (
-    <div className="App">
+    <div className="">
       <Formik
         initialValues={{
-          name: '',
-          email: '',
+          borrowers: [{borrwerPosision: 1, firstName: '', lastName: ''}, {
+            borrwerPosision: 2,
+            firstName: '',
+            lastName: '',
+            ssn: ''
+          }],
         }}
-        validationSchema={Yup.object({
-          borrower1Name: Yup.string()
-            .min(3, 'Must be atleast 3 characters')
-            .max(6, 'Must be 15 characters or less')
-            .required('Cannot be empty'),
-          borrower2Name: Yup.string()
-            .min(3, 'Must be atleast 3 characters')
-            .max(6, 'Must be 15 characters or less')
-            .required('Cannot be empty'),
-          borrower3Name: Yup.string()
-            .min(3, 'Must be atleast 3 characters')
-            .max(6, 'Must be 15 characters or less')
-            .required('Cannot be empty'),
-          borrower1Email: Yup.string()
-            .email('Invalid email address')
-            .required('Cannot be empty'),
-          borrower2Email: Yup.string()
-            .email('Invalid email address')
-            .required('Cannot be empty'),
-          borrower3Email: Yup.string()
-            .email('Invalid email address')
-            .required('Cannot be empty')
+        validationSchema={Yup.object().shape({
+          borrowers: Yup.array()
+            .of(
+              Yup.object().shape({
+                firstName: Yup.string()
+                  .required('Required'), // these constraints take precedence
+                lastName: Yup.string()
+                  .min(2, 'GO')
+                  .required('Required'), // these constraints take precedence
+              })
+
+            )
+
+            .required('Must have friends') // these constraints are shown if and only if inner constraints are satisfied
+
+            .min(3, 'Minimum of 3 friends'),
+
         })}
         onSubmit={((values, {setSubmitting, resetForm}) => {
           setTimeout(() => {
             alert(JSON.stringify(values, null, 2));
-            resetForm();
+            // resetForm();
             setSubmitting(false)
           }, 3000)
         })}
@@ -79,19 +76,57 @@ const App = () => {
         {formProps => (
           <Form>
             <h1>Sign Up</h1>
-            {borrowers.map(borrower => <>
-              <Field name={`${borrower}Name`} as={CustomTextInput} label={`${borrower}Name`} placeholder="name" />
-              <br/>
-              <Field name={`${borrower}Email`} as={CustomTextInput} label={`${borrower}Email`} placeholder="Name@org.com" />
-              <br/>
-            </>)}
-            <button type='button' onClick={() => addButton()}>Add</button>
-            <button type='submit' onClick={async () => await removeButton(formProps)}>Remove</button>
+
+            <FieldArray name='borrowers' validateOnChange>
+              {fieldArrayProps => {
+                console.log('>>>>> fieldArrayProps', fieldArrayProps);
+                const removeOnClick = (index) => {
+                  console.log('>>>>> fieldArrayProps.form.values.borrowers', fieldArrayProps.form.values.borrowers);
+
+                  for (let idx = index+1; idx < fieldArrayProps.form.values.borrowers.length; idx++) {
+                    console.log('>>>> fieldArrayProps.form.values.borrowers[index].borrwerPosision', fieldArrayProps.form.values.borrowers[idx].borrwerPosision);
+                    formProps.setFieldValue(`borrowers.${idx}.borrwerPosision`, fieldArrayProps.form.values.borrowers[idx].borrwerPosision - 1, false);
+                  }
+                  fieldArrayProps.remove(index);
+                };
+
+                //
+
+                return (
+                  <div>
+                    {fieldArrayProps.form.values.borrowers.map((borrower, index) => {
+                      return <div className={'parent'}>
+                          <div className={'child'}>
+                            <Field
+                              name={`borrowers.${index}.firstName`}
+                              as={CustomTextInput} label={`FirstName`} placeholder="name"/>
+                            <br/>
+                            <Field name={`borrowers.${index}.lastName`}
+                                   as={CustomTextInput} label={`LastName`}
+                                   placeholder="Name@org.com"/>
+                            <br/>
+                          </div>
+                          <div>
+                            <button type='button' onClick={() => removeOnClick(index)}>Remove</button>
+                          </div>
+                        </div>
+                      })
+                    }
+                    <button type='button' onClick={() => fieldArrayProps.push({borrwerPosision: fieldArrayProps.form.values.borrowers.length + 1, firstName: '', lastName: ''})}>Add</button>
+                  </div>)
+              }}
+            </FieldArray>
           </Form>
         )}
       </Formik>
     </div>
   );
 }
+
+
+/***
+ * when we add we should setFieldValue value for BorrowerPosition.
+ * Validation
+ */
 
 export default App;
